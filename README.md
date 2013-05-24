@@ -1,3 +1,11 @@
+# Stash53
+
+A work in progres. This was originally forked from [passivedns](https://github.com/gamelinux/passivedns), so you're probably better off there!
+
+
+### Original README
+
+```txt
 #
 #  ______                                           ____   __  __  _____
 # |  __  |                         @               |    \ |  \ | ||  ___| (TM)
@@ -88,3 +96,4 @@ Questions, suggestions, sugar or flame is always welcome :)
 I hope PassiveDNS gives you a new tool to fight malware and its herders...
 
 (c)2011-2012  -  Edward Bjarte Fjellskål
+```
