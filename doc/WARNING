@@ -1,0 +1,6 @@
+This repository was originally forked from https://github.com/gamelinux/passivedns
+and most of the code herein is originally from there. I have removed stuff I won't
+be needing, and have made a number of modifications/additions to src/*, probably
+breaking the good work by the original AUTHORS.
+
+JPM 2013-05-24
