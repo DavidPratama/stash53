@@ -1016,7 +1016,7 @@ void usage()
 void show_version()
 {
     olog("\n");
-    olog("[*] PassiveDNS %s (Emitter edition)\n", VERSION);
+    olog("[*] stash53, originally: PassiveDNS %s (Emitter edition)\n", VERSION);
     olog("[*] By Edward Bjarte Fjellskål <edward.fjellskaal@gmail.com>\n");
     olog("[*] Using %s\n", pcap_lib_version());
     olog("[*] Using ldns version %s\n",ldns_version());
