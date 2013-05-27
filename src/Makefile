@@ -14,7 +14,7 @@ LDFLAGS=-lpcap -lldns -lhiredis
 OBJECTS=$(patsubst %.c,%.o,$(wildcard *.c))
 DOBJECTS=$(patsubst %.o,%_dbg.o,$(OBJECTS))
 POBJECTS=$(patsubst %.o,%_pfl.o,$(OBJECTS))
-BINARY=passivedns
+BINARY=stash53
 
 ifeq ($(UNAME), FreeBSD)
     OCFLAGS=-I/usr/local/include -O3
@@ -32,18 +32,18 @@ all: $(BINARY)
 %.o: %.c Makefile
 	gcc $(OCFLAGS) -c $< -o $@
 
-passivedns: $(OBJECTS)
-	gcc -o passivedns $(OBJECTS) $(LDFLAGS)
+stash53: $(OBJECTS)
+	gcc -o stash53 $(OBJECTS) $(LDFLAGS)
 
 static: $(OBJECTS)
-	gcc -static -o passivedns dns.o passivedns.o $(LDFLAGS) -lc -lnsl -lcrypto -lz
+	gcc -static -o stash53 dns.o stash53.o $(LDFLAGS) -lc -lnsl -lcrypto -lz
 
 debug: $(DOBJECTS)
-	gcc -o passivedns $(DOBJECTS) $(LDFLAGS)
+	gcc -o stash53 $(DOBJECTS) $(LDFLAGS)
 
 profile: $(POBJECTS)
-	gcc -o passivedns $(POBJECTS) $(LDFLAGS)
+	gcc -o stash53 $(POBJECTS) $(LDFLAGS)
 
 clean:
-	-rm -v passivedns *.o 2>/dev/null || true
+	-rm -v stash53 *.o 2>/dev/null || true
 
