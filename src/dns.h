@@ -94,6 +94,7 @@ typedef struct _pdns_asset {
     struct in6_addr        cip;        /* DNS Client IP (v4/6) */
     struct _pdns_asset    *next;       /* Next dns asset */
     struct _pdns_asset    *prev;       /* Prev dns asset */
+    char   *rrprint;		       /* Printable rdata (JPM) */
 } pdns_asset;
 
 typedef struct _pdns_record {
@@ -126,7 +127,6 @@ void expire_all_dns_records();
 void delete_dns_record (pdns_record * pdnsr, pdns_record ** bucket_ptr);
 void delete_dns_asset (pdns_asset **passet_head, pdns_asset *passet);
 void update_config_mem_counters();
-void parse_dns_flags (char *args);
 void update_dns_stats(packetinfo *pi, uint8_t code);
 uint16_t pdns_chk_dnsfe(uint16_t rcode);
 

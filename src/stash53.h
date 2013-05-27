@@ -22,7 +22,7 @@
 /*  I N C L U D E S  **********************************************************/
 
 /*  D E F I N E S  ************************************************************/
-#define VERSION                       "1.1.3"
+#define VERSION                       "1.1.3-a"
 #define TIMEOUT                       60
 #define BUCKET_SIZE                   65537
 #define SNAPLENGTH                    1600
@@ -520,6 +520,23 @@ typedef struct _globalconfig {
     char        *configpath;             /* Path to config dir */
     uint32_t     dnsprinttime;           /* Minimum time between printing duplicate dns info */
     uint32_t     dnscachetimeout;        /* Time before a dns record/asset times out if not updated */
+#if USE_EMITTER
+    char	*nsid;   		 /* Nameserver ID */
+    char	*emit_option;		 /* Option for emitter (zmq, redis, etc.) */
+    char	*emit_topic;		 /* PUB topic for emitter (MQTT, Redis) */
+    unsigned long zcounter;		 /* PUB counter */
+#if USE_MQTT
+    struct mosquitto *mosq;		 /* MQTT connection */
+#endif
+#if USE_ZMQ
+    void	*zcontext;		 /* ZMQ context */
+    void	*zpublisher;		 /* ZMQ publisher socket */
+    char	*ztopic;		 /* ZMQ topic */
+#endif /* USE_ZMQ */
+#if USE_REDIS
+    redisContext *rediscon;		 /* Redis context */
+#endif /* USE_REDIS */
+#endif /* USE_EMITTER */
 } globalconfig;
 
 #define ISSET_CONFIG_VERBOSE(config)    ((config).cflags & CONFIG_VERBOSE)

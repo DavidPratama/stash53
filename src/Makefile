@@ -1,11 +1,15 @@
 #Makefile
 UNAME := $(shell uname -s)
 
-OCFLAGS=-O3
+#OCFLAGS=-O3 -DUSE_EMITTER -DUSE_MQTT=1
+OCFLAGS=-O3 -DUSE_EMITTER -DUSE_REDIS=1
+#OCFLAGS=-O3 -DUSE_EMITTER -DUSE_ZMQ=1
 #DCFLAGS=-Wall -Wextra -Werror -g -DDEBUG
 DCFLAGS=-Wall -g -DDEBUG
 PCFLAGS=-g -pg
-LDFLAGS=-lpcap -lldns
+LDFLAGS=-lpcap -lldns -lhiredis 
+#LDFLAGS=-lpcap -lldns -lmosquitto
+#LDFLAGS=-lpcap -lldns -lzmq
 
 OBJECTS=$(patsubst %.c,%.o,$(wildcard *.c))
 DOBJECTS=$(patsubst %.o,%_dbg.o,$(OBJECTS))
@@ -25,7 +29,7 @@ all: $(BINARY)
 %_pfl.o: %.c
 	gcc $(PCFLAGS) -c $< -o $@
 
-%.o: %.c
+%.o: %.c Makefile
 	gcc $(OCFLAGS) -c $< -o $@
 
 passivedns: $(OBJECTS)

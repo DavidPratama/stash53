@@ -41,7 +41,8 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <ctype.h>
-#include "passivedns.h"
+#include "emit.h"
+#include "stash53.h"
 #include "dns.h"
 
 #ifndef CONFDIR
@@ -923,6 +924,7 @@ void a_dump_payload(const uint8_t* data,uint16_t dlen) {
 void game_over()
 {
     if (config.inpacket == 0) {
+	emit_close();
         expire_all_dns_records();
         print_pdns_stats();
         if (config.handle != NULL) pcap_close(config.handle);
@@ -974,22 +976,30 @@ void usage()
     olog("USAGE:\n");
     olog(" $ passivedns [options]\n\n");
     olog(" OPTIONS:\n\n");
+    olog(" -e option       Emitter option for 0MQ, Redis (default: %s)\n", emit_config_default());
     olog(" -i <iface>      Network device <iface> (default: eth0).\n");
     olog(" -r <file>       Read pcap <file>.\n");
     olog(" -l <file>       Logfile normal queries (default: /var/log/passivedns.log).\n");
     olog(" -L <file>       Logfile for SRC Error queries (default: /var/log/passivedns.log).\n");
     olog(" -b 'BPF'        Berkley Packet Filter (default: 'port 53').\n");
     olog(" -p <file>       Name of pid file (default: /var/run/passivedns.pid).\n");
+#if USE_EMITTER
+    olog(" -N <nsid>       Nameserver ID (default: %s).\n", emit_nsid());
+    olog(" -O <topic>      Emitter topic (Redis/MQTT) (default: dns).\n");
+#endif
     olog(" -S <mem>        Soft memory limit in MB (default: 256).\n");
     olog(" -C <sec>        Seconds to cache DNS objects in memory (default %u).\n",DNSCACHETIMEOUT);
     olog(" -P <sec>        Seconds between printing duplicate DNS info (default %u).\n",DNSPRINTTIME);
+#if 0
     olog(" -X <flags>      Manually set DNS RR Types to care about(Default -X 46CDNPRS).\n");
+#endif
     olog(" -u <uid>        User ID to drop privileges to.\n");
     olog(" -g <gid>        Group ID to drop privileges to.\n");
     olog(" -T <dir>        Directory to chroot into.\n");
     olog(" -D              Run as daemon.\n");
     olog(" -V              Show version and exit.\n");
     olog(" -h              This help message.\n\n");
+#if 0
     olog(" FLAGS:\n");
     olog("\n");
     olog(" * For Record Types:\n");
@@ -999,13 +1009,14 @@ void usage()
     olog(" * For Server Return Code (SRC) Errors:\n");
     olog("   f:FORMERR   s:SERVFAIL  x:NXDOMAIN  o:NOTIMPL  r:REFUSED\n");
     olog("   y:YXDOMAIN  e:YXRRSET   t:NXRRSET   a:NOTAUTH  z:NOTZONE\n");
+#endif
     olog("\n");
 }
 
 void show_version()
 {
     olog("\n");
-    olog("[*] PassiveDNS %s\n", VERSION);
+    olog("[*] PassiveDNS %s (Emitter edition)\n", VERSION);
     olog("[*] By Edward Bjarte Fjellskål <edward.fjellskaal@gmail.com>\n");
     olog("[*] Using %s\n", pcap_lib_version());
     olog("[*] Using ldns version %s\n",ldns_version());
@@ -1040,11 +1051,24 @@ int main(int argc, char *argv[])
     config.dnsf |= DNS_CHK_NAPTR;
     config.dnsf |= DNS_CHK_RP;
     config.dnsf |= DNS_CHK_SRV;
-//    config.dnsf |= DNS_CHK_TXT;
-//    config.dnsf |= DNS_CHK_SOA;
-//    config.dnsf |= DNS_CHK_NS;
-//    config.dnsf |= DNS_CHK_MX;
-//    config.dnsf |= DNS_CHK_NXDOMAIN;
+
+    config.dnsf |= DNS_CHK_ALL; // JPM
+
+    config.dnsfe |=  DNS_SE_CHK_FORMERR;
+    config.dnsfe |=  DNS_SE_CHK_SERVFAIL;
+    config.dnsfe |=  DNS_SE_CHK_NXDOMAIN;
+    config.dnsfe |=  DNS_SE_CHK_NOTIMPL;
+    config.dnsfe |=  DNS_SE_CHK_REFUSED;
+    config.dnsfe |=  DNS_SE_CHK_YXDOMAIN;
+    config.dnsfe |=  DNS_SE_CHK_YXRRSET;
+    config.dnsfe |=  DNS_SE_CHK_NXRRSET;
+    config.dnsfe |=  DNS_SE_CHK_NOTAUTH;
+    config.dnsfe |=  DNS_SE_CHK_NOTZONE;
+
+
+    config.nsid = emit_nsid();
+    config.emit_option = emit_config_default();
+    config.emit_topic  = "dns";
 
     signal(SIGTERM, game_over);
     signal(SIGINT, game_over);
@@ -1052,10 +1076,13 @@ int main(int argc, char *argv[])
     signal(SIGALRM, sig_alarm_handler);
     signal(SIGUSR1, print_pdns_stats);
 
-#define ARGS "i:r:l:L:hb:Dp:C:P:S:X:u:g:T:V"
+#define ARGS "i:r:e:l:L:hb:Dp:C:N:P:S:u:g:T:VO:"
 
     while ((ch = getopt(argc, argv, ARGS)) != -1)
         switch (ch) {
+        case 'e':
+            config.emit_option = strdup(optarg);
+            break;
         case 'i':
             config.dev = strdup(optarg);
             break;
@@ -1077,14 +1104,17 @@ int main(int argc, char *argv[])
         case 'C':
             config.dnscachetimeout = strtol(optarg, NULL, 0);
             break;
+        case 'N':
+	    config.nsid = strdup(optarg);
+	    break;
+        case 'O':
+	    config.emit_topic = strdup(optarg);
+	    break;
         case 'P':
             config.dnsprinttime = strtol(optarg, NULL, 0);
             break;
         case 'S':
             config.mem_limit_max = (strtol(optarg, NULL, 0) * 1024 * 1024);
-            break;
-        case 'X':
-            parse_dns_flags(optarg);
             break;
         case 'D':
             daemon = 1;
@@ -1111,13 +1141,16 @@ int main(int argc, char *argv[])
             exit(0);
             break;
         case '?':
-            elog("unrecognized argument: '%c'\n", optopt);
-            break;
         default:
             elog("Did not recognize argument '%c'\n", ch);
+	    exit(1);
         }
 
     show_version();
+
+    if (emit_init() != 0) {
+    	game_over();
+    }
 
     if (config.pcap_file) {
         /* Read from PCAP file specified by '-r' switch. */

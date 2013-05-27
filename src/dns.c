@@ -28,7 +28,9 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <pcap.h>
-#include "passivedns.h"
+#include "json.h"
+#include "emit.h"
+#include "stash53.h"
 #include "dns.h"
 
 globalconfig config;
@@ -318,6 +320,11 @@ int cache_dns_objects(packetinfo *pi, ldns_rdf *rdf_data,
 
         rr = ldns_rr_list_rr(dns_answer_domains, j);
 
+	if (config.dnsf & DNS_CHK_ALL) {
+		offset = 0;
+		goto doall;
+	}
+
         switch (ldns_rr_get_type(rr)) {
             case LDNS_RR_TYPE_AAAA:
                 if (config.dnsf & DNS_CHK_AAAA)
@@ -374,11 +381,32 @@ int cache_dns_objects(packetinfo *pi, ldns_rdf *rdf_data,
                 break;
         }
 
+    doall:
         if (offset == -1) {
             dlog("[D] LDNS_RR_TYPE not enabled/supported: %d\n",ldns_rr_get_type(rr));
             //data_offset = 0;
             continue;
         }
+
+
+#ifdef JPTESTS
+
+	fprintf(stderr, "**JP: count %d\n", ldns_rr_rd_count(rr));
+
+	// ldns_rr_print(stderr, rr); // JPM
+	// ldns_pkt_print(stderr, dns_pkt); // JPM
+	// ldns_rr2buffer_str
+	
+	{
+		char *res = ldns_rr2str(rr);
+		fprintf(stderr, "***[ %s ]***\n", res);
+		free(res);
+	}
+#endif
+
+	if (ldns_rr_get_type(rr) == LDNS_RR_TYPE_MX) {
+		offset = 1;
+	}
 
         /* Get the rdf data from the rr */
         rname = ldns_rr_rdf(rr, offset);
@@ -478,9 +506,10 @@ void update_pdns_record_asset (packetinfo *pi, pdns_record *pr,
         prr->_rd_count     = rr->_rd_count;
         prr->_rr_type      = rr->_rr_type;
         prr->_rr_class     = rr->_rr_class;
-        prr->_rdata_fields = rr->_rdata_fields;
+        prr->_rdata_fields = rr->_rdata_fields;	
         passet->seen = 1;
         passet->rr = prr;
+	passet->rrprint	   = ldns_rr2str(rr);		// JPM: new: add rdata here
     } else {
         dlog("[D] BAD\n");
     }
@@ -536,6 +565,12 @@ void print_passet_err (pdns_record *l, ldns_rdf *lname, ldns_rr *rr, uint16_t rc
     uint8_t screen;
     static char ip_addr_s[INET6_ADDRSTRLEN];
     static char ip_addr_c[INET6_ADDRSTRLEN];
+    char *type, typebuf[20];
+    char *r, rcodebuf[20];
+    char *jsonstring;
+    JsonNode *query;
+
+	fprintf(stderr, "JPJP err\n");
 
     if (config.logfile_nxd[0] == '-' && config.logfile_nxd[1] == '\0' ) {
         if (config.handle == NULL) return;
@@ -551,8 +586,15 @@ void print_passet_err (pdns_record *l, ldns_rdf *lname, ldns_rr *rr, uint16_t rc
         }
     }
 
+    query = json_mkobject();
+
     u_ntop(l->sip, l->af, ip_addr_s);
     u_ntop(l->cip, l->af, ip_addr_c);
+
+    json_append_member(query, "error", json_mkbool(1));
+    // json_append_member(query, "clientip", json_mkstring(ip_addr_c));
+    json_append_member(query, "d_addr", json_mkstring(ip_addr_s));
+    json_append_member(query, "s_addr", json_mkstring(ip_addr_c));
 
     /* example output:
      * 1329575805.123456||100.240.60.160||80.160.30.30||IN||sadf.googles.com.||A||NXDOMAIN||0||1
@@ -581,85 +623,38 @@ void print_passet_err (pdns_record *l, ldns_rdf *lname, ldns_rr *rr, uint16_t rc
     }    
     
     fprintf(fd,"||%s||",l->qname);
+    json_append_member(query, "qname", json_mkstring(l->qname));
 
-    switch (ldns_rr_get_type(rr)) {
-        case LDNS_RR_TYPE_PTR:
-             fprintf(fd,"PTR");
-             break;
-        case LDNS_RR_TYPE_A:
-             fprintf(fd,"A");
-             break;
-        case LDNS_RR_TYPE_AAAA:
-             fprintf(fd,"AAAA");
-             break;
-        case LDNS_RR_TYPE_CNAME:
-             fprintf(fd,"CNAME");
-             break;
-        case LDNS_RR_TYPE_DNAME:
-             fprintf(fd,"DNAME");
-             break;
-        case LDNS_RR_TYPE_NAPTR:
-             fprintf(fd,"NAPTR");
-             break;
-        case LDNS_RR_TYPE_RP:
-             fprintf(fd,"RP");
-             break;
-        case LDNS_RR_TYPE_SRV:
-             fprintf(fd,"SRV");
-             break;
-        case LDNS_RR_TYPE_TXT:
-             fprintf(fd,"TXT");
-             break;
-        case LDNS_RR_TYPE_SOA:
-             fprintf(fd,"SOA");
-             break;
-        case LDNS_RR_TYPE_NS:
-             fprintf(fd,"NS");
-             break;
-        case LDNS_RR_TYPE_MX:
-             fprintf(fd,"MX");
-             break; 
-        default:
-            fprintf(fd,"%d",ldns_rdf_get_type(lname));
-            break;
+    // JPM
+    if ((type = ldns_rr_type2str(ldns_rr_get_type(rr))) != NULL) {
+    	strncpy(typebuf, type, sizeof(typebuf)-1);
+	free(type);
+    } else {
+        sprintf(typebuf, "TYPE#%d", ldns_rdf_get_type(lname));
     }
+    json_append_member(query, "qtype", json_mkstring(typebuf));
 
-    switch (rcode) {
-        case 1:
-            fprintf(fd,"||FORMERR");
-            break;
-        case 2:
-            fprintf(fd,"||SERVFAIL");
-            break;
-        case 3:
-            fprintf(fd,"||NXDOMAIN");
-            break;
-        case 4:
-            fprintf(fd,"||NOTIMPL");
-            break;
-        case 5:
-            fprintf(fd,"||REFUSED");
-            break;
-        case 6:
-            fprintf(fd,"||YXDOMAIN");
-            break;
-        case 7:
-            fprintf(fd,"||YXRRSET");
-            break;
-        case 8:
-            fprintf(fd,"||NXRRSET");
-            break;
-        case 9:
-            fprintf(fd,"||NOTAUTH");
-            break;
-        case 10:
-            fprintf(fd,"||NOTZONE");
-            break;
-        default:
-            fprintf(fd,"||UNKNOWN-ERROR-%d",rcode);
-            break;
+
+    if ((r = ldns_pkt_rcode2str(rcode)) != NULL) {
+        strcpy(rcodebuf, r);
+	free(r);
+    } else {
+        sprintf(rcodebuf, "RCODE#%d", rcode);
     }
+    
+    fprintf(fd, "%s", rcodebuf);
     fprintf(fd,"||0||1\n");
+    json_append_member(query, "rcode", json_mkstring(rcodebuf));
+
+    json_append_member(query, "n", json_mknumber(++config.zcounter));
+    json_append_member(query, "nsid", json_mkstring(config.nsid));
+
+    jsonstring = json_stringify(query, NULL);
+
+    emit(jsonstring);
+
+    free(jsonstring);
+    json_delete(query);
 
     if (screen == 0)
         fclose(fd);
@@ -668,12 +663,39 @@ void print_passet_err (pdns_record *l, ldns_rdf *lname, ldns_rr *rr, uint16_t rc
     l->seen = 0;
 }
 
+static char *mktld(char *qname)
+{
+	char buf[300];
+	char *p;
+
+	strncpy(buf, qname, sizeof(buf)-1);
+	buf[sizeof(buf) - 1] = 0;
+
+	if (buf[strlen(buf) - 1] == '.')
+		buf[strlen(buf) - 1] = 0;
+
+	if ((p = strrchr(buf, '.')) != NULL) {
+		char *q;
+
+		for (q = p; q && *q; q++) {
+			if (isupper(*q))
+				*q = tolower(*q);
+		}
+		return (p+1);
+	}
+	return (NULL);
+}
+
+
 void print_passet (pdns_asset *p, pdns_record *l) {
 
     FILE *fd;
     uint8_t screen;
     static char ip_addr_s[INET6_ADDRSTRLEN];
     static char ip_addr_c[INET6_ADDRSTRLEN];
+    char *type, typebuf[20], *class;
+    char *jsonstring, *tld;
+    JsonNode *query;
 
     if (config.logfile[0] == '-' && config.logfile[1] == '\0' ) {
         if (config.handle == NULL) return;
@@ -689,10 +711,23 @@ void print_passet (pdns_asset *p, pdns_record *l) {
         }
     }
 
+    query = json_mkobject();
+
     u_ntop(p->sip, p->af, ip_addr_s);
     u_ntop(p->cip, p->af, ip_addr_c);
     fprintf(fd,"%lu.%06lu||%s||%s||",p->last_seen.tv_sec, p->last_seen.tv_usec, ip_addr_c, ip_addr_s);
 
+    json_append_member(query, "ipv6", json_mkbool((p->af == AF_INET6) ? 1 : 0));
+    json_append_member(query, "error", json_mkbool(0));
+    // json_append_member(query, "clientip", json_mkstring(ip_addr_c));
+    json_append_member(query, "d_addr", json_mkstring(ip_addr_s));
+    json_append_member(query, "s_addr", json_mkstring(ip_addr_c));
+
+    if (p->rrprint) {
+	    json_append_member(query, "rrprint", json_mkstring(p->rrprint));
+    }
+
+#if 0
     switch (ldns_rr_get_class(p->rr)) {
         case LDNS_RR_CLASS_IN:
              fprintf(fd,"IN");
@@ -713,53 +748,48 @@ void print_passet (pdns_asset *p, pdns_record *l) {
              fprintf(fd,"%d",p->rr->_rr_class);
              break;
     }
+#endif
+
+    class = ldns_rr_class2str(ldns_rr_get_class(p->rr));
+    fprintf(fd, "%s", (class) ? class : "??");
+    json_append_member(query, "qclass", json_mkstring( (class) ? class : "??"));
+    if (class)
+    	free(class);
 
     fprintf(fd,"||%s||",l->qname);
+    json_append_member(query, "qname", json_mkstring(l->qname));
 
-    switch (ldns_rr_get_type(p->rr)) {
-        case LDNS_RR_TYPE_PTR:
-             fprintf(fd,"PTR");
-             break;
-        case LDNS_RR_TYPE_A:
-             fprintf(fd,"A");
-             break;
-        case LDNS_RR_TYPE_AAAA:
-             fprintf(fd,"AAAA");
-             break;
-        case LDNS_RR_TYPE_CNAME:
-             fprintf(fd,"CNAME");
-             break;
-        case LDNS_RR_TYPE_DNAME:
-             fprintf(fd,"DNAME");
-             break;
-        case LDNS_RR_TYPE_NAPTR:
-             fprintf(fd,"NAPTR");
-             break;
-        case LDNS_RR_TYPE_RP:
-             fprintf(fd,"RP");
-             break;
-        case LDNS_RR_TYPE_SRV:
-             fprintf(fd,"SRV");
-             break;
-        case LDNS_RR_TYPE_TXT:
-             fprintf(fd,"TXT");
-             break;
-        case LDNS_RR_TYPE_SOA:
-             fprintf(fd,"SOA");
-             break;
-        case LDNS_RR_TYPE_NS:
-             fprintf(fd,"NS");
-             break;
-        case LDNS_RR_TYPE_MX:
-             fprintf(fd,"MX");
-             break;
-        default:
-            fprintf(fd,"%d",p->rr->_rr_type);
-            break;
+    if ((tld = mktld(l->qname)) != NULL) {
+        json_append_member(query, "tld", json_mkstring(tld));
     }
 
+
+	// JPM
+    if ((type = ldns_rr_type2str(ldns_rr_get_type(p->rr))) != NULL) {
+    	strncpy(typebuf, type, sizeof(typebuf)-1);
+	free(type);
+    } else {
+        sprintf(typebuf, "TYPE#%d", p->rr->_rr_type);
+    }
+    fprintf(fd, "%s", typebuf);
+    json_append_member(query, "qtype", json_mkstring(typebuf));
+
     fprintf(fd,"||%s||%u||%lu\n", p->answer,p->rr->_ttl,p->seen);
+    json_append_member(query, "answer", json_mkstring(p->answer));
+    json_append_member(query, "ttl", json_mknumber(p->rr->_ttl));
     
+    json_append_member(query, "nsid", json_mkstring(config.nsid));
+    json_append_member(query, "n", json_mknumber(++config.zcounter));
+
+    jsonstring = json_stringify(query, NULL);
+
+    emit(jsonstring);
+
+    // s_sleep(10);
+	
+    free(jsonstring);
+    json_delete(query);
+
     if (screen == 0)
         fclose(fd);
 
@@ -1029,6 +1059,11 @@ void delete_dns_asset(pdns_asset **passet_head, pdns_asset *passet)
         next_pa->prev = prev_pa;
     }
 
+    if (passet->rrprint) {
+    	free(passet->rrprint);
+	passet->rrprint = NULL;
+    }
+       
     free(passet->rr);
     passet->rr = NULL;
     free(passet->answer);
@@ -1081,6 +1116,7 @@ void update_dns_stats(packetinfo *pi, uint8_t code)
     }
 }
 
+#if 0
 void parse_dns_flags (char *args)
 {
     int i   = 0;
@@ -1227,6 +1263,7 @@ void parse_dns_flags (char *args)
         config.dnsf = tmpf;
     }
 }
+#endif
 
 uint16_t pdns_chk_dnsfe(uint16_t rcode)
 {
