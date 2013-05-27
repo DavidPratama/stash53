@@ -2,7 +2,7 @@
 
 A work in progres. This was originally forked from [passivedns](https://github.com/gamelinux/passivedns), so you're probably better off there!
 
-![](jmbp-603.png)
+![](jmbp-603.jpg)
 
 ### Modifications to the original code
 
