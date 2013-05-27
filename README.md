@@ -21,6 +21,30 @@ A work in progres. This was originally forked from [passivedns](https://github.c
 * Add error-handling/recovery to emitters
 * Refactor packet capture to include all responses to a query in array so as to gather them in a single Logstash event. (Responses are currently gathered as distinct events.)
   
+### Quickstart
+
+1. Get [ElasticSearc](http://www.elasticsearch.org). You need the version used by
+   Logstash. At the time of this writing, that would be 0.20.5. Unpack it, and launch
+   it:
+```bash
+bin/elasticsearch -f
+```
+
+2. Get [Logstash](http://logstash.net).
+3. Create a configuration for Logstash, based upon the example in my blog post.
+4. Launch Logstash:
+```bash
+java -jar logstash-1.1.12-flatjar.jar agent -f dns.conf -v
+```
+5. Launch `stash53`, making sure you're using the correct network interface. Something
+   like this, for Redis output, should do.
+```bash
+./stash53 -i eth0 			# Interface
+	  -e 127.0.0.1/6379		# Redis host/port
+	  -l /dev/null
+	  -P 0
+	  -O dns:hippo			# list name for Redis
+```
 
 
 ### Original README
