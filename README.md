@@ -39,13 +39,14 @@ java -jar logstash-1.1.12-flatjar.jar agent -f dns.conf -v
 5. Launch `stash53`, making sure you're using the correct network interface. Something
    like this, for Redis output, should do.
 ```bash
-./stash53 -i eth0 			# Interface
-	  -e 127.0.0.1/6379		# Redis host/port
-	  -l /dev/null
-	  -P 0
-	  -O dns:hippo			# list name for Redis
+./stash53 -i eth0                    # Interface
+          -e 127.0.0.1/6379          # Redis host/port
+          -l /dev/null
+          -P 0
+          -O dns:hippo               # list name for Redis
 ```
-
+6. Get [Kibana3](http://three.kibana.org), and drop all the files on a Web server.
+   Edit `config.js` to have Kibana find your ElasticSearch server.
 
 ### Original README
 
