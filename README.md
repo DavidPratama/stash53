@@ -15,6 +15,11 @@ A work in progres. This was originally forked from [passivedns](https://github.c
   * For MQTT: `127.0.0.1/1183`
 * Added `-O` for specifying PUB topic (Redis and MQTT)
 * Added `-N` for specifying "nsid" (nameserver ID)
+
+### Todo
+
+* Add error-handling/recovery to emitters
+* Refactor packet capture to include all responses to a query in array so as to gather them in a single Logstash event. (Responses are currently gathered as distinct events.)
   
 
 
