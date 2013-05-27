@@ -1,5 +1,5 @@
 # Binaries
-src/passivedns
+src/stash53
 
 # Object files
 *.o
