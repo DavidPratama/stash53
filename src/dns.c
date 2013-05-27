@@ -388,22 +388,6 @@ int cache_dns_objects(packetinfo *pi, ldns_rdf *rdf_data,
             continue;
         }
 
-
-#ifdef JPTESTS
-
-	fprintf(stderr, "**JP: count %d\n", ldns_rr_rd_count(rr));
-
-	// ldns_rr_print(stderr, rr); // JPM
-	// ldns_pkt_print(stderr, dns_pkt); // JPM
-	// ldns_rr2buffer_str
-	
-	{
-		char *res = ldns_rr2str(rr);
-		fprintf(stderr, "***[ %s ]***\n", res);
-		free(res);
-	}
-#endif
-
 	if (ldns_rr_get_type(rr) == LDNS_RR_TYPE_MX) {
 		offset = 1;
 	}
@@ -569,8 +553,6 @@ void print_passet_err (pdns_record *l, ldns_rdf *lname, ldns_rr *rr, uint16_t rc
     char *r, rcodebuf[20];
     char *jsonstring;
     JsonNode *query;
-
-	fprintf(stderr, "JPJP err\n");
 
     if (config.logfile_nxd[0] == '-' && config.logfile_nxd[1] == '\0' ) {
         if (config.handle == NULL) return;
