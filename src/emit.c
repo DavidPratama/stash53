@@ -83,13 +83,13 @@ int emit_init()
 	return 1;
     }
 
-    rc = mosquitto_connect(config.mosq, "localhost", 1883, 60);
+    rc = mosquitto_connect(config.mosq, host, port, 60);
     if (rc) {
         if (rc == MOSQ_ERR_ERRNO) {
 	    char err[1024];
 
             strerror_r(errno, err, 1024);
-            fprintf(stderr, "Error: %s\n", err);
+            fprintf(stderr, "Error connecting to %s:%d: %s\n", host, port, err);
         } else {
             fprintf(stderr, "Unable to connect (%d).\n", rc);
         }
