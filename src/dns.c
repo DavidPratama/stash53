@@ -544,6 +544,16 @@ const char *u_ntop(const struct in6_addr ip_addr, int af, char *dest)
     return dest;
 }
 
+long time_now()
+{
+	struct timeval tv;
+
+	if (gettimeofday(&tv, NULL) == 0)
+		return (tv.tv_sec);
+
+	return (0L);
+}
+
 void print_passet_err (pdns_record *l, ldns_rdf *lname, ldns_rr *rr, uint16_t rcode) {
     FILE *fd;
     uint8_t screen;
@@ -630,6 +640,7 @@ void print_passet_err (pdns_record *l, ldns_rdf *lname, ldns_rr *rr, uint16_t rc
 
     json_append_member(query, "n", json_mknumber(++config.zcounter));
     json_append_member(query, "nsid", json_mkstring(config.nsid));
+    json_append_member(query, "timestamp", json_mknumber(time_now()));
 
     jsonstring = json_stringify(query, NULL);
 
@@ -762,6 +773,7 @@ void print_passet (pdns_asset *p, pdns_record *l) {
     
     json_append_member(query, "nsid", json_mkstring(config.nsid));
     json_append_member(query, "n", json_mknumber(++config.zcounter));
+    json_append_member(query, "timestamp", json_mknumber(time_now()));
 
     jsonstring = json_stringify(query, NULL);
 
