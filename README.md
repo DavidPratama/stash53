@@ -18,9 +18,7 @@ A work in progres. This was originally forked from [passivedns](https://github.c
 
 ### Todo
 
-* Add error-handling/recovery to emitters
-* Refactor packet capture to include all responses to a query in array so as to gather them in a single Logstash event. (Responses are currently gathered as distinct events.)
-* <del>Add `timestamp` to JSON, i.e. don't rely on Logstash' time, which could be different.</del>
+* See Issues.
   
 ### Quickstart
 
