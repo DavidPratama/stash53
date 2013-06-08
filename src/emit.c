@@ -162,9 +162,8 @@ int emit_init()
 void emit(char *jsonstring)
 {
     redisReply *redisrep;
-    char *key = "dns:hippo";		// FIXME
 
-    redisrep = redisCommand(config.rediscon, "RPUSH %s %s", key, jsonstring);
+    redisrep = redisCommand(config.rediscon, "RPUSH %s %s", config.emit_topic, jsonstring);
     freeReplyObject(redisrep);
 }
 

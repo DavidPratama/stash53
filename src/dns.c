@@ -564,18 +564,22 @@ void print_passet_err (pdns_record *l, ldns_rdf *lname, ldns_rr *rr, uint16_t rc
     char *jsonstring;
     JsonNode *query;
 
-    if (config.logfile_nxd[0] == '-' && config.logfile_nxd[1] == '\0' ) {
-        if (config.handle == NULL) return;
-        screen = 1;
-        fd = stdout;
+    if (config.logfile_nxd == NULL) {
+    	fd = NULL;
     } else {
-        screen = 0;
-        fd = fopen(config.logfile_nxd, "a");
-        if (fd == NULL) {
-            plog("[E] ERROR: Cant open file %s\n",config.logfile_nxd);
-            l->last_print = l->last_seen;
-            return;
-        }
+	    if (config.logfile_nxd[0] == '-' && config.logfile_nxd[1] == '\0' ) {
+		if (config.handle == NULL) return;
+		screen = 1;
+		fd = stdout;
+	    } else {
+		screen = 0;
+		fd = fopen(config.logfile_nxd, "a");
+		if (fd == NULL) {
+		    plog("[E] ERROR: Cant open file %s\n",config.logfile_nxd);
+		    l->last_print = l->last_seen;
+		    return;
+		}
+	    }
     }
 
     query = json_mkobject();
@@ -591,30 +595,33 @@ void print_passet_err (pdns_record *l, ldns_rdf *lname, ldns_rr *rr, uint16_t rc
     /* example output:
      * 1329575805.123456||100.240.60.160||80.160.30.30||IN||sadf.googles.com.||A||NXDOMAIN||0||1
      */
-    fprintf(fd,"%lu.%06lu||%s||%s||",l->last_seen.tv_sec, l->last_seen.tv_usec, ip_addr_c, ip_addr_s);
 
-    switch (ldns_rr_get_class(rr)) {
-        case LDNS_RR_CLASS_IN:
-             fprintf(fd,"IN");
-             break;
-        case LDNS_RR_CLASS_CH:
-             fprintf(fd,"CH");
-             break;
-        case LDNS_RR_CLASS_HS:
-             fprintf(fd,"HS");
-             break;
-        case LDNS_RR_CLASS_NONE:
-             fprintf(fd,"NONE");
-             break;
-        case LDNS_RR_CLASS_ANY:
-             fprintf(fd,"ANY");
-             break; 
-        default:
-             fprintf(fd,"%d",ldns_rr_get_class(rr));
-             break;
-    }    
+    if (fd) {
+	    fprintf(fd,"%lu.%06lu||%s||%s||",l->last_seen.tv_sec, l->last_seen.tv_usec, ip_addr_c, ip_addr_s);
+
+	    switch (ldns_rr_get_class(rr)) {
+		case LDNS_RR_CLASS_IN:
+		     fprintf(fd,"IN");
+		     break;
+		case LDNS_RR_CLASS_CH:
+		     fprintf(fd,"CH");
+		     break;
+		case LDNS_RR_CLASS_HS:
+		     fprintf(fd,"HS");
+		     break;
+		case LDNS_RR_CLASS_NONE:
+		     fprintf(fd,"NONE");
+		     break;
+		case LDNS_RR_CLASS_ANY:
+		     fprintf(fd,"ANY");
+		     break; 
+		default:
+		     fprintf(fd,"%d",ldns_rr_get_class(rr));
+		     break;
+	    }    
+	    fprintf(fd,"||%s||",l->qname);
+    }
     
-    fprintf(fd,"||%s||",l->qname);
     json_append_member(query, "qname", json_mkstring(l->qname));
 
     // JPM
@@ -634,8 +641,6 @@ void print_passet_err (pdns_record *l, ldns_rdf *lname, ldns_rr *rr, uint16_t rc
         sprintf(rcodebuf, "RCODE#%d", rcode);
     }
     
-    fprintf(fd, "%s", rcodebuf);
-    fprintf(fd,"||0||1\n");
     json_append_member(query, "rcode", json_mkstring(rcodebuf));
 
     json_append_member(query, "n", json_mknumber(++config.zcounter));
@@ -649,8 +654,12 @@ void print_passet_err (pdns_record *l, ldns_rdf *lname, ldns_rr *rr, uint16_t rc
     free(jsonstring);
     json_delete(query);
 
-    if (screen == 0)
-        fclose(fd);
+    if (fd) {
+	    fprintf(fd, "%s", rcodebuf);
+	    fprintf(fd,"||0||1\n");
+	    if (screen == 0)
+		fclose(fd);
+    }
 
     l->last_print = l->last_seen;
     l->seen = 0;
@@ -690,25 +699,28 @@ void print_passet (pdns_asset *p, pdns_record *l) {
     char *jsonstring, *tld;
     JsonNode *query;
 
-    if (config.logfile[0] == '-' && config.logfile[1] == '\0' ) {
-        if (config.handle == NULL) return;
-        screen = 1;
-        fd = stdout;
+    if (config.logfile == NULL) {
+    	fd = NULL;
     } else {
-        screen = 0;
-        fd = fopen(config.logfile, "a");
-        if (fd == NULL) {
-            plog("[E] ERROR: Cant open file %s\n",config.logfile);
-            p->last_print = p->last_seen;
-            return;
-        }
+	    if (config.logfile[0] == '-' && config.logfile[1] == '\0' ) {
+		if (config.handle == NULL) return;
+		screen = 1;
+		fd = stdout;
+	    } else {
+		screen = 0;
+		fd = fopen(config.logfile, "a");
+		if (fd == NULL) {
+		    plog("[E] ERROR: Cant open file %s\n",config.logfile);
+		    p->last_print = p->last_seen;
+		    return;
+		}
+	    }
     }
 
     query = json_mkobject();
 
     u_ntop(p->sip, p->af, ip_addr_s);
     u_ntop(p->cip, p->af, ip_addr_c);
-    fprintf(fd,"%lu.%06lu||%s||%s||",p->last_seen.tv_sec, p->last_seen.tv_usec, ip_addr_c, ip_addr_s);
 
     json_append_member(query, "ipv6", json_mkbool((p->af == AF_INET6) ? 1 : 0));
     json_append_member(query, "error", json_mkbool(0));
@@ -720,36 +732,16 @@ void print_passet (pdns_asset *p, pdns_record *l) {
 	    json_append_member(query, "rrprint", json_mkstring(p->rrprint));
     }
 
-#if 0
-    switch (ldns_rr_get_class(p->rr)) {
-        case LDNS_RR_CLASS_IN:
-             fprintf(fd,"IN");
-             break;
-        case LDNS_RR_CLASS_CH:
-             fprintf(fd,"CH");
-             break;
-        case LDNS_RR_CLASS_HS:
-             fprintf(fd,"HS");
-             break;
-        case LDNS_RR_CLASS_NONE:
-             fprintf(fd,"NONE");
-             break;
-        case LDNS_RR_CLASS_ANY:
-             fprintf(fd,"ANY");
-             break;
-        default:
-             fprintf(fd,"%d",p->rr->_rr_class);
-             break;
-    }
-#endif
-
     class = ldns_rr_class2str(ldns_rr_get_class(p->rr));
-    fprintf(fd, "%s", (class) ? class : "??");
+
+    if (fd) {
+	    fprintf(fd,"%lu.%06lu||%s||%s||",p->last_seen.tv_sec, p->last_seen.tv_usec, ip_addr_c, ip_addr_s);
+	    fprintf(fd, "%s", (class) ? class : "??");
+    }
     json_append_member(query, "qclass", json_mkstring( (class) ? class : "??"));
     if (class)
     	free(class);
 
-    fprintf(fd,"||%s||",l->qname);
     json_append_member(query, "qname", json_mkstring(l->qname));
 
     if ((tld = mktld(l->qname)) != NULL) {
@@ -764,10 +756,8 @@ void print_passet (pdns_asset *p, pdns_record *l) {
     } else {
         sprintf(typebuf, "TYPE#%d", p->rr->_rr_type);
     }
-    fprintf(fd, "%s", typebuf);
     json_append_member(query, "qtype", json_mkstring(typebuf));
 
-    fprintf(fd,"||%s||%u||%lu\n", p->answer,p->rr->_ttl,p->seen);
     json_append_member(query, "answer", json_mkstring(p->answer));
     json_append_member(query, "ttl", json_mknumber(p->rr->_ttl));
     
@@ -784,8 +774,13 @@ void print_passet (pdns_asset *p, pdns_record *l) {
     free(jsonstring);
     json_delete(query);
 
-    if (screen == 0)
-        fclose(fd);
+    if (fd) {
+	    fprintf(fd,"||%s||",l->qname);
+	    fprintf(fd, "%s", typebuf);
+	    fprintf(fd,"||%s||%u||%lu\n", p->answer,p->rr->_ttl,p->seen);
+	    if (screen == 0)
+		fclose(fd);
+    }
 
     p->last_print = p->last_seen;
     p->seen = 0;

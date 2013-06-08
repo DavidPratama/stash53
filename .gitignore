@@ -1,5 +1,7 @@
 # Binaries
 src/stash53
 
+src/mypu.sh
+
 # Object files
 *.o

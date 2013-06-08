@@ -1036,8 +1036,8 @@ int main(int argc, char *argv[])
     //char *pconfile;
 #define BPFF "port 53"
     config.bpff = BPFF;
-    config.logfile = "/var/log/passivedns.log";
-    config.logfile_nxd = "/var/log/passivedns.log";
+    config.logfile = NULL;
+    config.logfile_nxd = NULL;
     config.pidfile = "/var/run/passivedns.pid";
     config.mem_limit_max = (256 * 1024 * 1024); // 256 MB - default try to limit dns caching to this
     config.dnsprinttime = DNSPRINTTIME;
