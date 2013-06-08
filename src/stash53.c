@@ -979,8 +979,8 @@ void usage()
     olog(" -e option       Emitter option for 0MQ, Redis (default: %s)\n", emit_config_default());
     olog(" -i <iface>      Network device <iface> (default: eth0).\n");
     olog(" -r <file>       Read pcap <file>.\n");
-    olog(" -l <file>       Logfile normal queries (default: /var/log/passivedns.log).\n");
-    olog(" -L <file>       Logfile for SRC Error queries (default: /var/log/passivedns.log).\n");
+    olog(" -l <file>       Logfile for normal queries (no default).\n");
+    olog(" -L <file>       Logfile for SRC Error queries (no default).\n");
     olog(" -b 'BPF'        Berkley Packet Filter (default: 'port 53').\n");
     olog(" -p <file>       Name of pid file (default: /var/run/passivedns.pid).\n");
 #if USE_EMITTER
