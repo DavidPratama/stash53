@@ -53,3 +53,8 @@ java -jar logstash-1.1.12-flatjar.jar agent -f dns.conf -v
 
 Please see the [original README](README)
 
+### Notes
+
+
+This program includes [libtai](http://cr.yp.to/libtai.html) which is in
+the public domain.

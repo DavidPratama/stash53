@@ -1,11 +1,11 @@
 #Makefile
 UNAME := $(shell uname -s)
 
-#OCFLAGS=-O3 -DUSE_EMITTER -DUSE_MQTT=1
-OCFLAGS=-O3 -DUSE_EMITTER -DUSE_REDIS=1
-#OCFLAGS=-O3 -DUSE_EMITTER -DUSE_ZMQ=1
+#OCFLAGS=-O3 -Ilibtai-0.60 -DUSE_EMITTER -DUSE_MQTT=1
+OCFLAGS=-O3 -Ilibtai-0.60 -DUSE_EMITTER -DUSE_REDIS=1
+#OCFLAGS=-O3 -Ilibtai-0.60 -DUSE_EMITTER -DUSE_ZMQ=1
 #DCFLAGS=-Wall -Wextra -Werror -g -DDEBUG
-DCFLAGS=-Wall -g -DDEBUG
+DCFLAGS=-Wall -g -DDEBUG -Ilibtai-0.60
 PCFLAGS=-g -pg
 LDFLAGS=-lpcap -lldns -lhiredis 
 #LDFLAGS=-lpcap -lldns -lmosquitto
@@ -15,6 +15,7 @@ OBJECTS=$(patsubst %.c,%.o,$(wildcard *.c))
 DOBJECTS=$(patsubst %.o,%_dbg.o,$(OBJECTS))
 POBJECTS=$(patsubst %.o,%_pfl.o,$(OBJECTS))
 BINARY=stash53
+LIBTAI=libtai-0.60/libtai.a
 
 ifeq ($(UNAME), FreeBSD)
     OCFLAGS=-I/usr/local/include -O3
@@ -32,8 +33,11 @@ all: $(BINARY)
 %.o: %.c Makefile
 	gcc $(OCFLAGS) -c $< -o $@
 
-stash53: $(OBJECTS)
-	gcc -o stash53 $(OBJECTS) $(LDFLAGS)
+$(LIBTAI): libtai-0.60
+	(cd libtai-0.60 && make libtai.a)
+
+stash53: $(OBJECTS) $(LIBTAI)
+	gcc -o stash53 $(OBJECTS) $(LDFLAGS) $(LIBTAI)
 
 static: $(OBJECTS)
 	gcc -static -o stash53 dns.o stash53.o $(LDFLAGS) -lc -lnsl -lcrypto -lz

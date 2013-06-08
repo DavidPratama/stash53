@@ -563,6 +563,7 @@ void print_passet_err (pdns_record *l, ldns_rdf *lname, ldns_rr *rr, uint16_t rc
     char *r, rcodebuf[20];
     char *jsonstring;
     JsonNode *query;
+    char tstamp[TAI64STAMP+1];
 
     if (config.logfile_nxd == NULL) {
     	fd = NULL;
@@ -645,7 +646,9 @@ void print_passet_err (pdns_record *l, ldns_rdf *lname, ldns_rr *rr, uint16_t rc
 
     json_append_member(query, "n", json_mknumber(++config.zcounter));
     json_append_member(query, "nsid", json_mkstring(config.nsid));
-    json_append_member(query, "timestamp", json_mknumber(time_now()));
+
+    tai64stamp(tstamp);
+    json_append_member(query, "timestamp", json_mkstring(tstamp));
 
     jsonstring = json_stringify(query, NULL);
 
@@ -698,6 +701,7 @@ void print_passet (pdns_asset *p, pdns_record *l) {
     char *type, typebuf[20], *class;
     char *jsonstring, *tld;
     JsonNode *query;
+    char tstamp[TAI64STAMP+1];
 
     if (config.logfile == NULL) {
     	fd = NULL;
@@ -763,7 +767,9 @@ void print_passet (pdns_asset *p, pdns_record *l) {
     
     json_append_member(query, "nsid", json_mkstring(config.nsid));
     json_append_member(query, "n", json_mknumber(++config.zcounter));
-    json_append_member(query, "timestamp", json_mknumber(time_now()));
+
+    tai64stamp(tstamp);
+    json_append_member(query, "timestamp", json_mkstring(tstamp));
 
     jsonstring = json_stringify(query, NULL);
 
