@@ -986,6 +986,7 @@ void usage()
 #if USE_EMITTER
     olog(" -N <nsid>       Nameserver ID (default: %s).\n", emit_nsid());
     olog(" -O <topic>      Emitter topic (Redis/MQTT) (default: dns).\n");
+    olog(" -v              Also print emitted JSON to stdout.\n");
 #endif
     olog(" -S <mem>        Soft memory limit in MB (default: 256).\n");
     olog(" -C <sec>        Seconds to cache DNS objects in memory (default %u).\n",DNSCACHETIMEOUT);
@@ -1066,9 +1067,12 @@ int main(int argc, char *argv[])
     config.dnsfe |=  DNS_SE_CHK_NOTZONE;
 
 
+#if USE_EMITTER
     config.nsid = emit_nsid();
     config.emit_option = emit_config_default();
     config.emit_topic  = "dns";
+    config.emit_verbose = 0;
+#endif
 
     signal(SIGTERM, game_over);
     signal(SIGINT, game_over);
@@ -1076,13 +1080,16 @@ int main(int argc, char *argv[])
     signal(SIGALRM, sig_alarm_handler);
     signal(SIGUSR1, print_pdns_stats);
 
-#define ARGS "i:r:e:l:L:hb:Dp:C:N:P:S:u:g:T:VO:"
+#define ARGS "i:r:e:l:L:hb:Dp:C:N:P:S:u:g:T:VO:v"
 
     while ((ch = getopt(argc, argv, ARGS)) != -1)
         switch (ch) {
         case 'e':
             config.emit_option = strdup(optarg);
             break;
+	case 'v':
+	    config.emit_verbose = 1;
+	    break;
         case 'i':
             config.dev = strdup(optarg);
             break;

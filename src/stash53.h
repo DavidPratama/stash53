@@ -525,6 +525,7 @@ typedef struct _globalconfig {
     char	*emit_option;		 /* Option for emitter (zmq, redis, etc.) */
     char	*emit_topic;		 /* PUB topic for emitter (MQTT, Redis) */
     unsigned long zcounter;		 /* PUB counter */
+    char	emit_verbose;		 /* Also print emitted JSON to stdout */
 #if USE_MQTT
     struct mosquitto *mosq;		 /* MQTT connection */
 #endif

@@ -15,6 +15,8 @@ A work in progres. This was originally forked from [passivedns](https://github.c
   * For MQTT: `127.0.0.1/1183`
 * Added `-O` for specifying PUB topic (Redis and MQTT)
 * Added `-N` for specifying "nsid" (nameserver ID)
+* Added `-v` option to print additionally print emitted JSON to stdout
+* Logging to files is now disabled unless `-l` or `-L` are specified
 
 ### Todo
 

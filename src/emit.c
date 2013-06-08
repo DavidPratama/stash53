@@ -109,6 +109,9 @@ int emit_init()
 
 void emit(char *jsonstring)
 {
+    if (config.emit_verbose)
+    	printf("%s\n", jsonstring);
+
 	mosquitto_publish(config.mosq, NULL, config.emit_topic,
 		strlen(jsonstring), jsonstring, 0, false);
 }
@@ -163,6 +166,9 @@ void emit(char *jsonstring)
 {
     redisReply *redisrep;
 
+    if (config.emit_verbose)
+    	printf("%s\n", jsonstring);
+
     redisrep = redisCommand(config.rediscon, "RPUSH %s %s", config.emit_topic, jsonstring);
     freeReplyObject(redisrep);
 }
@@ -198,6 +204,9 @@ int emit_init()
 
 void emit(char *jsonstring)
 {
+    if (config.emit_verbose)
+    	printf("%s\n", jsonstring);
+
     s_sendmore(config.zpublisher, config.ztopic);
     s_send(config.zpublisher, jsonstring);
 }
